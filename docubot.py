@@ -10,6 +10,8 @@ Core DocuBot class responsible for:
 import os
 import glob
 
+from matplotlib import text
+
 class DocuBot:
     def __init__(self, docs_folder="docs", llm_client=None):
         """
@@ -23,17 +25,13 @@ class DocuBot:
         self.documents = self.load_documents()  # List of (filename, text)
 
         # Build a retrieval index (implemented in Phase 1)
-        self.index = self.build_index(self.documents)
+        self.build_index()
 
     # -----------------------------------------------------------
     # Document Loading
     # -----------------------------------------------------------
 
     def load_documents(self):
-        """
-        Loads all .md and .txt files inside docs_folder.
-        Returns a list of tuples: (filename, text)
-        """
         docs = []
         pattern = os.path.join(self.docs_folder, "*.*")
         for path in glob.glob(pattern):
@@ -41,69 +39,72 @@ class DocuBot:
                 with open(path, "r", encoding="utf8") as f:
                     text = f.read()
                 filename = os.path.basename(path)
-                docs.append((filename, text))
+
+                # split into chunks
+                chunks = self.split_into_chunks(text)
+                for chunk in chunks:
+                    chunk = chunk.strip()
+                    if chunk:  # ignore empty chunks
+                        docs.append((filename, chunk))
         return docs
 
     # -----------------------------------------------------------
     # Index Construction (Phase 1)
     # -----------------------------------------------------------
 
-    def build_index(self, documents):
-        """
-        TODO (Phase 1):
-        Build a tiny inverted index mapping lowercase words to the documents
-        they appear in.
-
-        Example structure:
-        {
-            "token": ["AUTH.md", "API_REFERENCE.md"],
-            "database": ["DATABASE.md"]
-        }
-
-        Keep this simple: split on whitespace, lowercase tokens,
-        ignore punctuation if needed.
-        """
-        index = {}
-        # TODO: implement simple indexing
-        return index
+    def build_index(self):
+        self.index = {}
+        for doc_id, (filename, text) in enumerate(self.documents):
+            words = text.lower().split()
+            for word in words:
+                if word not in self.index:
+                    self.index[word] = set()
+                self.index[word].add(doc_id)
 
     # -----------------------------------------------------------
     # Scoring and Retrieval (Phase 1)
     # -----------------------------------------------------------
 
-    def score_document(self, query, text):
-        """
-        TODO (Phase 1):
-        Return a simple relevance score for how well the text matches the query.
+    def split_into_chunks(self, text):
+        return text.split("\n\n")
 
-        Suggested baseline:
-        - Convert query into lowercase words
-        - Count how many appear in the text
-        - Return the count as the score
+    def score_document(self, query, doc_tuple):
         """
-        # TODO: implement scoring
-        return 0
+        doc_tuple = (filename, text)
+        Returns a numeric relevance score.
+        """
+        _, doc_text = doc_tuple
+        score = 0
+        query_words = query.lower().split()
+        doc_words = doc_text.lower().split()
+
+        for word in query_words:
+            score += doc_words.count(word)
+
+        return score
 
     def retrieve(self, query, top_k=3):
-        """
-        TODO (Phase 1):
-        Use the index and scoring function to select top_k relevant document snippets.
+        scores = []
 
-        Return a list of (filename, text) sorted by score descending.
-        """
-        results = []
-        # TODO: implement retrieval logic
-        return results[:top_k]
+        for doc_tuple in self.documents:
+            score = self.score_document(query, doc_tuple)
+            scores.append((score, doc_tuple))
+
+        scores.sort(reverse=True, key=lambda x: x[0])
+
+        # return top_k snippets only if score > 0
+        results = [doc for score, doc in scores if score > 0][:top_k]
+
+        if not results:
+            return []
+
+        return results
 
     # -----------------------------------------------------------
     # Answering Modes
     # -----------------------------------------------------------
 
     def answer_retrieval_only(self, query, top_k=3):
-        """
-        Phase 1 retrieval only mode.
-        Returns raw snippets and filenames with no LLM involved.
-        """
         snippets = self.retrieve(query, top_k=top_k)
 
         if not snippets:
