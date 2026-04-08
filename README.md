@@ -1,7 +1,14 @@
 # DocuBot
 
-DocuBot is a small documentation assistant that helps answer developer questions about a codebase.  
-It can operate in three different modes:
+## TF Summary
+
+The core concept of this activity is understanding how retrieval strengthens AI outputs by providing evidence, demonstrating the difference between naive generation, retrieval-only systems, and Retrieval-Augmented Generation (RAG).
+
+Students are most likely to struggle with designing a retrieval pipeline, deciding how to split documents into meaningful chunks, and implementing guardrails to safely refuse answers when the documentation lacks relevant information.
+
+AI was helpful in suggesting code snippets, reasoning about index construction, and refactoring logic, but it could be misleading when it confidently generated answers without grounding in the documentation, particularly in naive mode.
+
+To guide a student without giving the answer, I would encourage them to first explore the documentation manually, identify logical ways to break it into chunks, and write simple scoring and retrieval functions. This approach teaches critical thinking, evidence-based reasoning, and safe integration of AI tools in software projects.
 
 1. **Naive LLM mode**  
    Sends the entire documentation corpus to a Gemini model and asks it to answer the question.
